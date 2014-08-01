@@ -1,0 +1,96 @@
+#![feature(macro_rules)]
+#![deny(warnings)]
+
+#[cfg(test)] extern crate test;
+
+pub use fmt::{
+    Style,
+    Styled,
+
+    Bold,
+    Dim,
+    Italic,
+    Underline,
+    Inverse,
+    Hidden,
+    Strike,
+
+    Black,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Magenta,
+    Cyan,
+    White,
+    Gray,
+
+    BgBlack,
+    BgRed,
+    BgGreen,
+    BgYellow,
+    BgBlue,
+    BgMagenta,
+    BgCyan,
+    BgWhite
+};
+
+pub mod ansi;
+mod fmt;
+
+
+#[cfg(test)]
+mod tests {
+
+    use std::fmt::Show;
+    use test::Bencher;
+
+    #[inline]
+    fn assert_show<T: Show>(show: T, expected: &str) {
+        assert_eq!(format!("{}", show).as_slice(), expected);
+    }
+
+    #[test]
+    fn test_colors_string() {
+        assert_show(super::Red.show("red"), "\u001b[31mred\u001b[39m");
+    }
+
+    #[test]
+    fn test_colors_add() {
+        let color = super::Red + super::Bold;
+        assert_show(color.show("red"), "\u001b[1m\u001b[31mred\u001b[39m\u001b[22m");
+        let color2 = color + super::BgYellow;
+        assert_show(color2.show("red"), "\u001b[43m\u001b[1m\u001b[31mred\u001b[39m\u001b[22m\u001b[49m");
+    }
+
+    #[test]
+    fn test_colors_chain() {
+        let color = super::Red.bold();
+        assert_show(color.show("red"), "\u001b[1m\u001b[31mred\u001b[39m\u001b[22m");
+        let color2 = color.bg_yellow();
+        assert_show(color2.show("red"), "\u001b[43m\u001b[1m\u001b[31mred\u001b[39m\u001b[22m\u001b[49m");
+    }
+
+    #[bench]
+    fn bench_fmt(b: &mut Bencher) {
+        let red = super::Red.show("red");
+        b.iter(|| {
+            format!("{}", red);
+        });
+    }
+
+    #[bench]
+    fn bench_fmt_many_styles(b: &mut Bencher) {
+        let many = super::Red.bold().underline().bg_blue().show("many");
+        b.iter(|| {
+            format!("{}", many);
+        });
+    }
+
+    #[bench]
+    fn bench_builder(b: &mut Bencher) {
+        b.iter(|| {
+            let _ = super::Red.bold().bg_blue().show("red");
+        });
+    }
+}
