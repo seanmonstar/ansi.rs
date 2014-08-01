@@ -2,7 +2,7 @@
 
 A utility library in Rust to wrap blobs in ANSI character codes, giving them color and style.
 
-Built using [Cargo][https://github.com/rust-lang/cargo].
+Built using [Cargo](https://github.com/rust-lang/cargo).
 
 ## Usage
 
@@ -19,7 +19,7 @@ fn main() {
 ## TODO
 
 - impl `Fn` on `Style`, so you can call it directly instead of using a `show` method.
-    - The code to do this is already there, but blocked on a `rustc` bug: https://github.com/rust-lang/rust/issues/15905
+    - The code to do this is already there, but blocked on a `rustc` [bug](https://github.com/rust-lang/rust/issues/15905)
 - Docs
 - Faster
 
