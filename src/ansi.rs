@@ -16,9 +16,15 @@ impl fmt::Show for Code {
     }
 }
 
+impl AsSlice<Ansi> for [Ansi, ..1] {
+    fn as_slice(&self) -> &[Ansi] {
+        self
+    }
+}
+
 macro_rules! ansi (
     ($($name:ident: $open:expr, $close:expr,)*) => {
-        $(pub static $name: Ansi = Ansi {
+        $(pub const $name: Ansi = Ansi {
             open: Code($open),
             close: Code($close)
         };)*

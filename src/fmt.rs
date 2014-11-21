@@ -1,5 +1,6 @@
 use std::fmt;
 use std::ops::{Add/*, Fn*/};
+use std::slice::Items;
 
 use ansi::{mod, Ansi};
 
@@ -9,7 +10,7 @@ pub struct Style<V> {
 
 
 
-impl<VL: Vector<Ansi>, VR: Vector<Ansi>> Add<Style<VR>, Style<Vec<Ansi>>> for Style<VL> {
+impl<VL: AsSlice<Ansi>, VR: AsSlice<Ansi>> Add<Style<VR>, Style<Vec<Ansi>>> for Style<VL> {
     fn add(&self, other: &Style<VR>) -> Style<Vec<Ansi>> {
         let (left, right) = (self.styles.as_slice(), other.styles.as_slice());
 
@@ -25,26 +26,20 @@ impl<VL: Vector<Ansi>, VR: Vector<Ansi>> Add<Style<VR>, Style<Vec<Ansi>>> for St
 }
 
 
-impl<T: fmt::Show, V: Vector<Ansi>> Style<V> {
+impl<T: fmt::Show, V: AsSlice<Ansi>> Style<V> {
     pub fn show(&self, show: T) -> Styled<T> {
         Styled {
-            styles: Vec::from_slice(self.styles.as_slice()),
+            styles: self.styles.as_slice().to_vec(),
             subject: show
         }
     }
 }
 
-/*
-impl<T: fmt::Show, V: Vector<Ansi>> Fn<(T,), Styled<T>> for Style<V> {
-    #[rust_call_abi_hack]
-    fn call(&self, (show,): (T,)) -> Styled<T> {
-        Styled {
-            styles: Vec::from_slice(self.styles.as_slice()),
-            subject: show
-        }
+impl<T: fmt::Show, V: AsSlice<Ansi>> Fn<(T,), Styled<T>> for Style<V> {
+    extern "rust-call" fn call(&self, (show,): (T,)) -> Styled<T> {
+        self.show(show)
     }
 }
-*/
 
 pub struct Styled<T> {
     styles: Vec<Ansi>,
@@ -53,31 +48,37 @@ pub struct Styled<T> {
 
 impl<T: fmt::Show> fmt::Show for Styled<T> {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        return recurse(self.styles.as_slice(), &self.subject, fmt);
+        return recurse(self.styles.as_slice().iter(), &self.subject, fmt);
 
-        fn recurse<T: fmt::Show>(mut styles: &[Ansi], subject: &T, fmt: &mut fmt::Formatter) -> fmt::Result {
-            if styles.is_empty() {
-                subject.fmt(fmt)
-            } else {
-                let style = styles.pop_ref().unwrap();
-                try!(style.open.fmt(fmt));
-                try!(recurse(styles, subject, fmt));
-                style.close.fmt(fmt)
+        fn recurse<'a, T: fmt::Show>(mut styles: Items<'a, Ansi>, subject: &T, fmt: &mut fmt::Formatter) -> fmt::Result {
+            match styles.next_back() {
+                None => subject.fmt(fmt),
+                Some(style) => {
+                    try!(style.open.fmt(fmt));
+                    try!(recurse(styles, subject, fmt));
+                    style.close.fmt(fmt)
+                }
             }
         }
     }
 }
 
+
 macro_rules! styles (
     ($($name:ident: $ansi:ident, $method:ident),*) => {
-        $(pub static $name: Style<&'static [Ansi]> = Style { styles: &[ansi::$ansi] };)*
+        $(
+        #[allow(non_upper_case_globals)]
+        pub static $name: Style<[Ansi, ..1]> = Style {
+            styles: [ansi::$ansi]
+        };
+        )*
 
-        impl<V: Vector<Ansi>> Style<V> {
+        impl<V: AsSlice<Ansi>> Style<V> {
             $(
             pub fn $method(&self) -> Style<Vec<Ansi>> {
                 *self + $name
             }
-             )*
+            )*
         }
     }
 )
