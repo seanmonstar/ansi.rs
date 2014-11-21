@@ -3,3 +3,5 @@
 name = "ansi"
 version = "0.1.0"
 authors = ["Sean McArthur <sean.monstar@gmail.com>"]
+description = "Easily compose ansi styles into fmt::Show objects."
+license = "MPLv2.0"
